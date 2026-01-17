@@ -1,6 +1,5 @@
-# db.py
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
-from config import settings # FLAT IMPORT
+from config import settings
 
 class MongoDB:
     client: AsyncIOMotorClient = None
@@ -11,12 +10,22 @@ mongodb = MongoDB()
 async def connect_to_mongo():
     mongodb.client = AsyncIOMotorClient(settings.MONGO_URI)
     mongodb.database = mongodb.client[settings.DB_NAME]
-    print("✅ Connected to MongoDB successfully!")
-    await mongodb.database["crime_collection"].create_index([("location", "2dsphere")], background=True)
+
+    await mongodb.database[settings.COLLECTION_NAME].create_index(
+        [("location", "2dsphere")],
+        background=True
+    )
+
+    print("✅ Connected to MongoDB")
 
 async def close_mongo_connection():
-    mongodb.client.close()
-    print("❌ Disconnected from MongoDB.")
+    if mongodb.client:
+        mongodb.client.close()
 
-def get_database() -> AsyncIOMotorDatabase:
+def get_database():
+    if mongodb.database is None:
+        raise RuntimeError("MongoDB not initialized")
     return mongodb.database
+
+def get_crime_collection():
+    return mongodb.database[settings.COLLECTION_NAME]

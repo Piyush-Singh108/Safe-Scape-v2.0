@@ -1,23 +1,26 @@
-# main.py
 from fastapi import FastAPI
-from db import connect_to_mongo, close_mongo_connection # FLAT IMPORT
-import health, crime, routing # FLAT IMPORT
+from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI(
-    title="SafeScape v2.0 Backend",
-    description="FastAPI application for crime mapping and safety routing."
+from db import connect_to_mongo, close_mongo_connection
+import crime, routing
+
+app = FastAPI(title="SafeScape v2.0")
+
+# 🔑 FIXED CORS (ALLOW ALL DURING DEV)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-# Event Handlers
 app.add_event_handler("startup", connect_to_mongo)
 app.add_event_handler("shutdown", close_mongo_connection)
 
-# Router Inclusion
-app.include_router(health.router)
 app.include_router(crime.router, prefix="/api/v1")
 app.include_router(routing.router, prefix="/api/v1")
 
-
-@app.get("/", include_in_schema=False)
+@app.get("/")
 def root():
-    return {"message": "Welcome to SafeScape v2.0 API. Check /docs for documentation."}
+    return {"status": "SafeScape backend running"}

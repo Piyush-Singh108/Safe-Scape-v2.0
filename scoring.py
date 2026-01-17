@@ -1,20 +1,39 @@
-# services_scoring.py
-from typing import List
+# scoring.py
 from datetime import datetime
-from models import CrimeDataModel # FLAT IMPORT
+from math import exp
 
-def calculate_temporal_factor(incident_time: datetime, travel_time: datetime) -> float:
-    time_diff_hours = abs((incident_time - travel_time).total_seconds()) / 3600
-    if time_diff_hours < 4: return 1.5
-    elif time_diff_hours < 12: return 1.0
-    else: return 0.5 
+# 🔑 Tunable constants (safe for demo + viva)
+BASE_RADIUS_METERS = 150
+MAX_SEGMENT_RISK = 15.0
 
-def calculate_segment_risk(
-    crimes_near_segment: List[CrimeDataModel], travel_time: datetime
-) -> float:
-    total_risk = 0.0
-    for crime in crimes_near_segment:
-        temporal_factor = calculate_temporal_factor(crime.incident_time, travel_time)
-        weighted_risk = crime.severity_score * temporal_factor
-        total_risk += weighted_risk
-    return total_risk
+
+def calculate_segment_risk(crimes, time_of_travel: datetime) -> float:
+    """
+    Returns a non-zero, normalized risk score per route segment
+    based on:
+    - number of crimes
+    - severity
+    - night-time amplification
+    """
+
+    if not crimes:
+        return 0.5  # 🔑 VERY IMPORTANT: empty areas still have baseline risk
+
+    total_severity = 0.0
+
+    for crime in crimes:
+        severity = getattr(crime, "severity_score", None) or 2
+
+        # 🌙 Night-time amplification
+        if time_of_travel.hour >= 20 or time_of_travel.hour <= 5:
+            severity *= 1.6
+
+        total_severity += severity
+
+    # 🔥 Density amplification (more crimes = exponentially riskier)
+    density_factor = 1 - exp(-len(crimes) / 3)
+
+    raw_risk = total_severity * density_factor
+
+    # 🔒 Clamp to avoid runaway values
+    return min(raw_risk, MAX_SEGMENT_RISK)

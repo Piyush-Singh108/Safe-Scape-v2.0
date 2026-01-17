@@ -1,16 +1,18 @@
 # config.py
-from pydantic_settings import BaseSettings # <--- THIS IS THE CRITICAL CHANGE
+from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     MONGO_URI: str
     DB_NAME: str
-    EXTERNAL_ROUTING_API_KEY: str
-    
-    # Load default values from .env
-    ROUTE_BUFFER_METERS: int 
-    MAX_CRIME_FETCH: int 
+    COLLECTION_NAME: str
+
+    ORS_API_KEY: str   # OpenRouteService key
+
+    ROUTE_BUFFER_METERS: int = 150
+    MAX_CRIME_FETCH: int = 200
 
     class Config:
         env_file = ".env"
+        extra = "forbid"
 
 settings = Settings()
